@@ -71,7 +71,7 @@ Environment variables ini digunakan oleh Django untuk melakukan koneksi ke datab
 
 Berikut tampilan halaman awal Django setelah project berhasil dijalankan:
 
-![Django Welcome Page](screenshots/Djangowelcomepage.png)
+![Django Welcome Page](Screenshots/Djangowelcomepage.png)
 
 Halaman ini dapat diakses melalui:
 http://localhost:8000
