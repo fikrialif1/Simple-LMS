@@ -82,6 +82,8 @@ Jika halaman tersebut muncul, berarti:
 - Django berhasil dijalankan
 - Koneksi PostgreSQL berhasil
 
+---
+
 ## Data Models
 
 Project Simple LMS ini mengimplementasikan beberapa model utama:
@@ -111,11 +113,13 @@ Project Simple LMS ini mengimplementasikan beberapa model utama:
 - Tracking penyelesaian Lesson oleh Student
 - Digunakan untuk monitoring progress pembelajaran
 
+---
+
 ## Query Optimization
 
 Untuk meningkatkan performa aplikasi, dilakukan Query Optimization untuk menghindari N+1 Query Problem.
 
-*🔴 Sebelum Optimasi (N+1 Problem)*
+### 🔴 Sebelum Optimasi (N+1 Problem)
 
 Query dijalankan tanpa optimasi:
 
@@ -123,7 +127,7 @@ N+1 Query Count: 2
 
 Query tambahan terjadi karena Django melakukan query terpisah untuk setiap relasi instructor.
 
-*🟢 Setelah Optimasi*
+### 🟢 Setelah Optimasi
 
 Menggunakan Query Optimization:
 
@@ -131,11 +135,13 @@ Optimized Query Count: 1
 
 Jumlah query berkurang menjadi satu query saja.
 
-*Teknik yang Digunakan*
-select_related() → untuk relasi ForeignKey
-prefetch_related() → untuk relasi banyak data (multiple objects)
+### Teknik yang Digunakan
+- select_related() → untuk relasi ForeignKey
+- prefetch_related() → untuk relasi banyak data (multiple objects)
 
 Optimasi ini mengurangi jumlah query secara signifikan dan meningkatkan performa aplikasi dengan menghindari N+1 Query Problem.
+
+---
 
 ## Django Admin Features
 
