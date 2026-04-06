@@ -19,7 +19,7 @@ services:
     restart: always
     environment:
       POSTGRES_DB: lms_db
-      POSTGRES_USER: lms_user
+      POSTGRES_USER: Fikri
       POSTGRES_PASSWORD: lms_password
     ports:
       - "5432:5432"
