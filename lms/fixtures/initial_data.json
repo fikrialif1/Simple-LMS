@@ -1,0 +1,127 @@
+[
+{
+  "model": "lms.user",
+  "pk": 1,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$nxm6x0Wg6QFQ2bs7qZP5Y8$OuqrnYntLAZU8uNKWIHlmKcBRGzGtSL21qtefEUytQ4=",
+    "last_login": "2026-04-06T09:38:21.116Z",
+    "is_superuser": true,
+    "username": "admin",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-04-06T09:36:58.733Z",
+    "role": "",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "lms.user",
+  "pk": 2,
+  "fields": {
+    "password": "instructor123",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "instructor1",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-04-06T10:29:46Z",
+    "role": "instructor",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "lms.user",
+  "pk": 3,
+  "fields": {
+    "password": "student123",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "student1",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-04-06T10:32:51Z",
+    "role": "student",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "lms.category",
+  "pk": 1,
+  "fields": {
+    "name": "Programming",
+    "parent": null
+  }
+},
+{
+  "model": "lms.category",
+  "pk": 2,
+  "fields": {
+    "name": "Web Development",
+    "parent": 1
+  }
+},
+{
+  "model": "lms.category",
+  "pk": 3,
+  "fields": {
+    "name": "Python",
+    "parent": 2
+  }
+},
+{
+  "model": "lms.course",
+  "pk": 1,
+  "fields": {
+    "title": "Python Basic",
+    "instructor": 2,
+    "category": 3
+  }
+},
+{
+  "model": "lms.lesson",
+  "pk": 1,
+  "fields": {
+    "course": 1,
+    "title": "Introduction Python",
+    "order": 1
+  }
+},
+{
+  "model": "lms.lesson",
+  "pk": 2,
+  "fields": {
+    "course": 1,
+    "title": "Variables",
+    "order": 2
+  }
+},
+{
+  "model": "lms.enrollment",
+  "pk": 1,
+  "fields": {
+    "student": 3,
+    "course": 1
+  }
+},
+{
+  "model": "lms.progress",
+  "pk": 1,
+  "fields": {
+    "enrollment": 1,
+    "lesson": 1,
+    "completed": true
+  }
+}
+]
