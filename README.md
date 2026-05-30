@@ -196,14 +196,6 @@ Pada progress ini, aplikasi Simple LMS dikembangkan menjadi REST API menggunakan
 - Dokumentasi API otomatis menggunakan Swagger UI.
 - Pengujian endpoint langsung melalui browser.
 
-## Teknologi & Library
-
-- Django
-- Django Ninja
-- Django Ninja JWT
-- Pydantic
-- SQLite
-
 ## Cara Menjalankan API
 
 ### 1. Pastikan migrasi database sudah dijalankan:
@@ -213,7 +205,7 @@ python manage.py makemigrations
 python manage.py migrate
 ```
 
-Menjalankan Server
+### 2. Menjalankan Server
 
 ```bash
 python manage.py runserver
@@ -238,7 +230,7 @@ http://127.0.0.1:8000/api/docs
 
 ![Register/auth](Screenshots/auth_register.png)
  
-### 5. Login dan Me Endpoint
+### 5. Login
 
 ![Login/auth](Screenshots/auth_login.png)
 
