@@ -156,3 +156,93 @@ Fitur Django Admin yang diimplementasikan:
     - Course
     - Enrollment
     - Progress
+---
+
+# Progress 3: Simple LMS - REST API & JWT Authentication
+
+Pada progress ini, aplikasi Simple LMS dikembangkan menjadi REST API menggunakan Django Ninja. Fokus utama pengembangan adalah implementasi JWT Authentication, validasi data menggunakan Pydantic Schema, serta pembatasan akses berdasarkan role pengguna Role-Based Access Control (RBAC)(RBAC).
+
+## Fitur yang Diimplementasikan
+
+### Authentication System (JWT)
+
+- Registrasi user baru berdasarkan role.
+- Login menggunakan Access Token dan Refresh Token.
+- Endpoint profil pengguna (/auth/me).
+- Update profil pengguna.
+
+### Role-Based Access Control (RBAC)
+
+- Implementasi hak akses berdasarkan role:
+  - Admin
+  - Instructor
+  - Student
+- Proteksi endpoint sesuai role pengguna.
+
+### Course Management
+
+- Menampilkan daftar course dengan pagination dan filtering.
+- Instructor dapat membuat dan mengubah course miliknya.
+- Admin dapat menghapus course.
+
+### Enrollment & Progress Tracking
+
+- Student dapat melakukan enrollment course.
+- Menampilkan course yang diikuti.
+- Menandai lesson sebagai selesai (completed).
+
+### API Documentation
+
+- Dokumentasi API otomatis menggunakan Swagger UI.
+- Pengujian endpoint langsung melalui browser.
+
+## Teknologi & Library
+
+- Django
+- Django Ninja
+- Django Ninja JWT
+- Pydantic
+- SQLite
+
+## Cara Menjalankan API
+
+### 1. Pastikan migrasi database sudah dijalankan:
+
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+Menjalankan Server
+
+```bash
+python manage.py runserver
+```
+
+Server akan berjalan pada:
+
+```text
+http://127.0.0.1:8000
+```
+
+### 3. Mengakses Dokumentasi API
+
+Swagger UI tersedia pada:
+
+```text
+http://127.0.0.1:8000/api/docs
+```
+![Dokumentasi API](Screenshots/api_docs.png)
+
+### 4. Register
+
+![Register/auth](Screenshots/auth_register.png)
+ 
+### 5. Login dan Me Endpoint
+
+![Login/auth](Screenshots/auth_login.png)
+
+### 6. Postman Collection
+
+![Postman collection](Screenshots/postman%20collection.png)
+---
