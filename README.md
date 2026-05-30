@@ -160,7 +160,7 @@ Fitur Django Admin yang diimplementasikan:
 
 # Progress 3: Simple LMS - REST API & JWT Authentication
 
-Pada progress ini, aplikasi Simple LMS dikembangkan menjadi REST API menggunakan Django Ninja. Fokus utama pengembangan adalah implementasi JWT Authentication, validasi data menggunakan Pydantic Schema, serta pembatasan akses berdasarkan role pengguna Role-Based Access Control (RBAC)(RBAC).
+Pada progress ini, aplikasi Simple LMS dikembangkan menjadi REST API menggunakan Django Ninja. Fokus utama pengembangan adalah implementasi JWT Authentication, validasi data menggunakan Pydantic Schema, serta pembatasan akses berdasarkan role pengguna Role-Based Access Control (RBAC).
 
 ## Fitur yang Diimplementasikan
 
@@ -226,11 +226,11 @@ http://127.0.0.1:8000/api/docs
 ```
 ![Dokumentasi API](Screenshots/api_docs.png)
 
-### 4. Register
+### 4. Register/auth
 
 ![Register/auth](Screenshots/auth_register.png)
  
-### 5. Login
+### 5. Login/auth
 
 ![Login/auth](Screenshots/auth_login.png)
 
