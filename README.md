@@ -305,7 +305,7 @@ docker compose ps
    - API docs  http://localhost:8000/api/docs
    ![API docs](Screenshots/api-docs.png)
    - Flower Monitoring http://localhost:5555
-   ![Flower Monitoring](Screenshots/flower.png)
+   ![Flower Monitoring](Screenshots/Screenshot%202026-06-25%20110638.png)
    - RabbitMQ Management http://localhost:15672 
    ![RabbtMQ Management](Screenshots/Screenshot%202026-06-25%20104454.png)
    ![RabbtMQ Management](Screenshots/Screenshot%202026-06-25%20104531.png)
