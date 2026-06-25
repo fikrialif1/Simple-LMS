@@ -304,9 +304,9 @@ docker compose ps
    -  Django App http://localhost:8000 
    - API docs  http://localhost:8000/api/docs
    ![API docs](Screenshots/api-docs.png)
-   -flower monitoring
+   - Flower Monitoring http://localhost:5555
    ![Flower Monitoring](Screenshots/flower-monitoring.png)
-   -RabbtMQ Management
+   - RabbitMQ Management http://localhost:15672 
    ![RabbtMQ Management](Screenshots/Screenshot%202026-06-25%20104454.png)
    ![RabbtMQ Management](Screenshots/Screenshot%202026-06-25%20104531.png)
 
