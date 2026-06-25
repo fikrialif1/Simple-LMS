@@ -2,3 +2,13 @@ Django>=4.2
 psycopg2-binary
 python-dotenv
 django-ninja==1.1
+
+django-ninja-jwt
+django-ninja-extra
+
+redis
+django-redis
+pymongo
+celery
+flower
+django-celery-beat

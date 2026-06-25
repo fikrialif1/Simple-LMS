@@ -238,3 +238,97 @@ http://127.0.0.1:8000/api/docs
 
 ![Postman collection](Screenshots/postman%20collection.png)
 ---
+
+# Progress 4: Simple LMS - Advanced Features & Service Integration
+
+Pada progress ini, project Simple LMS telah dikembangkan dengan Mengintegrasikan Redis caching, MongoDB, dan Celery untuk meningkatkan performa sistem, menyediakan fitur monitoring dan analytics, serta pemrosesan tugas secara asynchronous.
+
+## Fitur yang diimplementasikan
+### Redis Features
+
+- Caching daftar course.
+- Caching detail course berdasarkan ID.
+- Cache invalidation otomatis ketika data course berubah.
+- Rate limiting sebesar **60 request per menit**.
+
+### MongoDB Features
+
+- Penyimpanan activity log pengguna.
+- Penyimpanan learning analytics.
+- Aggregation query untuk laporan enrollment.
+
+### Celery Background Tasks
+
+- **send_enrollment_email**
+  - Mengirim notifikasi ketika user berhasil melakukan enrollment.
+
+- **generate_certificate**
+  - Membuat sertifikat setelah seluruh lesson pada course selesai.
+
+- **update_course_statistics**
+  - Memperbarui statistik jumlah peserta course secara berkala.
+
+- **export_course_report**
+  - Menghasilkan laporan course dalam format CSV secara asynchronous.
+
+### Message Broker
+
+- RabbitMQ digunakan sebagai broker komunikasi antara Django dan Celery.
+
+### Monitoring
+
+- Flower digunakan untuk memonitor worker dan task Celery secara real-time.
+
+## Teknologi dan Library
+- Django
+- Redis
+- MongoDB
+- Celery
+- RabbitMQ
+- Flower
+- Django Ratelimit
+
+## Cara menjalankan project
+1. Build dan jalankan seluruh service
+
+```bash
+docker compose up -d --build
+```
+
+2. Pastikan semua container aktif
+
+```bash
+docker compose ps
+```
+3. Akses aplikasi
+   -  Django App http://localhost:8000 
+   - API docs  http://localhost:8000/api/docs
+   ![API docs](Screenshots/api-docs.png)
+   -flower monitoring
+   ![Flower Monitoring](Screenshots/flower-monitoring.png)
+   -RabbtMQ Management
+   ![RabbtMQ Management](Screenshots/Screenshot%202026-06-25%20104454.png)
+   ![RabbtMQ Management](Screenshots/Screenshot%202026-06-25%20104531.png)
+
+## Arsitektur Sistem
+
+```mermaid
+graph TD
+    User --> Django
+    Django --> Redis
+    Django --> PostgreSQL
+    Django --> MongoDB
+    Django --> RabbitMQ
+    RabbitMQ --> CeleryWorker
+    CeleryBeat --> CeleryWorker
+    CeleryWorker --> Flower
+```
+
+## Dokumentasi Tambahan
+
+- Redis digunakan untuk caching course dan rate limiting.
+- MongoDB digunakan untuk menyimpan activity log dan analytics.
+- Celery menjalankan task di background.
+- Flower digunakan untuk monitoring worker dan task Celery secara real-time.
+
+

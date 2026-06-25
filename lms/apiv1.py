@@ -14,6 +14,14 @@ from .auth.schemas import EnrollmentIn
 from .auth.permissions import is_student
 from .models import Progress, Lesson
 from .auth.schemas import ProgressSchema
+from django.core.cache import cache
+from .mongo import db
+from datetime import datetime
+
+from .tasks import send_enrollment_email
+from .tasks import generate_certificate
+from .tasks import export_course_report
+
 
 apiv1 = NinjaAPI(
     title="Simple LMS API",
@@ -38,6 +46,16 @@ apiv1.add_router(
 @paginate
 def listCourses(request, title: str = None):
 
+    cache_key = f"courses:{title}"
+
+    cached = cache.get(cache_key)
+
+    if cached:
+        print("CACHE HIT")
+        return cached
+
+    print("CACHE MISS")
+
     courses = Course.objects.for_listing()
 
     if title:
@@ -45,7 +63,17 @@ def listCourses(request, title: str = None):
             title__icontains=title
         )
 
-    return courses
+    result = list(courses)
+
+    cache.set(
+        cache_key,
+        result,
+        timeout=900
+    )
+
+    print("CACHE SAVED:", cache_key)
+
+    return result
 
 
 # DETAIL COURSE
@@ -56,8 +84,23 @@ def listCourses(request, title: str = None):
 )
 def detailCourse(request, id: int):
 
+    cache_key = f"course:{id}"
+
+    cached = cache.get(cache_key)
+
+    if cached:
+        return cached
+
     try:
-        return Course.objects.get(pk=id)
+        course = Course.objects.get(pk=id)
+
+        cache.set(
+            cache_key,
+            course,
+            timeout=900
+        )
+
+        return course
 
     except Course.DoesNotExist:
         raise HttpError(
@@ -90,6 +133,15 @@ def createCourse(request, data: CourseIn):
         instructor=request.user,
         category=category
     )
+
+    db.activity_logs.insert_one({
+        "user_id": request.user.id,
+        "course_id": course.id,
+        "action": "create_course",
+        "timestamp": datetime.utcnow()
+    })
+
+    cache.delete_pattern("courses:*")
 
     return 201, course
 
@@ -125,6 +177,16 @@ def updateCourse(request, id: int, data: CourseIn):
 
     course.save()
 
+    db.activity_logs.insert_one({
+        "user_id": request.user.id,
+        "course_id": course.id,
+        "action": "update_course",
+        "timestamp": datetime.utcnow()
+    })
+
+    cache.delete_pattern("courses:*")
+    cache.delete(f"course:{course.id}")
+
     return course
 
 
@@ -147,6 +209,16 @@ def deleteCourse(request, id: int):
             404,
             "Course tidak ditemukan"
         )
+
+    cache.delete_pattern("courses:*")
+    cache.delete(f"course:{course.id}")
+
+    db.activity_logs.insert_one({
+        "user_id": request.user.id,
+        "course_id": course.id,
+        "action": "delete_course",
+        "timestamp": datetime.utcnow()
+    })
 
     course.delete()
 
@@ -176,6 +248,18 @@ def enroll_course(request, data: EnrollmentIn):
     enrollment = Enrollment.objects.create(
         student=request.user,
         course_id=data.course_id
+    )
+
+    db.activity_logs.insert_one({
+        "user_id": request.user.id,
+        "course_id": data.course_id,
+        "action": "enroll_course",
+        "timestamp": datetime.utcnow()
+    })
+
+    send_enrollment_email.delay(
+        request.user.email,
+        enrollment.course.title
     )
 
     return {
@@ -255,6 +339,97 @@ def mark_progress(request, id: int, data: ProgressSchema):
     progress.completed = True
     progress.save()
 
+    completed_lessons = Progress.objects.filter(
+        enrollment=enrollment,
+        completed=True
+    ).count()
+
+    total_lessons = Lesson.objects.filter(
+        course=enrollment.course
+    ).count()
+
+    if total_lessons > 0 and completed_lessons == total_lessons:
+        generate_certificate.delay(
+            request.user.id,
+            enrollment.course.id
+        )
+
+    db.learning_analytics.insert_one({
+        "student_id": request.user.id,
+        "course_id": enrollment.course.id,
+        "lesson_id": lesson.id,
+        "completed": True,
+        "timestamp": datetime.utcnow()
+    })
+
     return {
         "message": "Lesson selesai"
     }
+
+
+# ANALYTICS REPORT
+@apiv1.get(
+    "/reports/enrollments",
+    tags=["Reports"]
+)
+def enrollment_report(request):
+
+    result = list(
+        db.activity_logs.aggregate([
+            {
+                "$group": {
+                    "_id": "$course_id",
+                    "total": {
+                        "$sum": 1
+                    }
+                }
+            }
+        ])
+    )
+
+    for item in result:
+        item["_id"] = str(item["_id"])
+
+    return result
+
+@apiv1.post(
+    "/reports/export",
+    auth=jwt_auth,
+    tags=["Reports"]
+)
+def export_report(request):
+
+    is_admin(request.user)
+
+    export_course_report.delay()
+
+    return {
+        "message": "Export report sedang diproses"
+    }
+
+@apiv1.get(
+    "/reports/analytics",
+    auth=jwt_auth,
+    tags=["Reports"]
+)
+def learning_analytics_report(request):
+
+    is_admin(request.user)
+
+    result = list(
+        db.learning_analytics.aggregate([
+            {
+                "$group": {
+                    "_id": "$course_id",
+                    "completed_lessons": {
+                        "$sum": 1
+                    }
+                }
+            }
+        ])
+    )
+
+    for item in result:
+        item["_id"] = str(item["_id"])
+
+    return result
