@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual Environment
+venv/
+.env
+
+# Django
+db.sqlite3
+media/
+staticfiles/
+
+# Celery
+celerybeat-schedule
+
+# Generated Reports
+course_report.csv
+
+# VS Code
+.vscode/
+
+# OS Files
+.DS_Store
+Thumbs.db

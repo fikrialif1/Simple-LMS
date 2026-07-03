@@ -1,32 +1,73 @@
-from ninja import NinjaAPI
-from ninja.errors import HttpError
-from ninja.pagination import paginate
+from datetime import datetime
 from typing import List
 
+from django.core.cache import cache
+from django.db import connection
+from django.db.models import Count
+
+from ninja import NinjaAPI
+from ninja.pagination import paginate
 from ninja_jwt.authentication import JWTAuth
 
-from .models import User, Course, Category
-from .auth.schemas import CourseIn, CourseOut, DetailCourseOut
-from .auth.permissions import is_instructor, is_admin
-from .auth.auth_api import router as auth_router
-from .models import Enrollment
-from .auth.schemas import EnrollmentIn
-from .auth.permissions import is_student
-from .models import Progress, Lesson
-from .auth.schemas import ProgressSchema
-from django.core.cache import cache
-from .mongo import db
-from datetime import datetime
+from pymongo.errors import PyMongoError
 
-from .tasks import send_enrollment_email
-from .tasks import generate_certificate
-from .tasks import export_course_report
+from .auth.auth_api import router as auth_router
+from .auth.permissions import (
+    is_admin,
+    is_instructor,
+    is_student,
+)
+from .auth.schemas import (
+    AnnouncementIn,
+    AnnouncementOut,
+    CourseIn,
+    CourseOut,
+    DetailCourseOut,
+    EnrollmentIn,
+    InstructorDashboardOut,
+    ProgressSchema,
+    StudentCourseProgressOut,
+    StudentDashboardOut,
+    StudentProgressOut,
+)
+
+from .models import (
+    Announcement,
+    Category,
+    Course,
+    Enrollment,
+    Lesson,
+    Progress,
+    User,
+)
+
+from .mongo import db
+
+from .tasks import (
+    export_course_report,
+    generate_certificate,
+    send_enrollment_email,
+)
+
+from .utils import (
+    api_error,
+    api_success,
+    http_error_handler,
+)
 
 
 apiv1 = NinjaAPI(
     title="Simple LMS API",
     version="1.0.0",
 )
+
+from ninja.errors import HttpError
+from django.http import JsonResponse
+
+
+@apiv1.exception_handler(HttpError)
+def handle_http_error(request, exc):
+    return http_error_handler(request, exc)
 
 jwt_auth = JWTAuth()
 
@@ -79,7 +120,10 @@ def listCourses(request, title: str = None):
 # DETAIL COURSE
 @apiv1.get(
     "/courses/{id}",
-    response=DetailCourseOut,
+    response={
+        200: dict,
+        404: dict
+    },
     tags=["Courses"]
 )
 def detailCourse(request, id: int):
@@ -94,25 +138,34 @@ def detailCourse(request, id: int):
     try:
         course = Course.objects.get(pk=id)
 
+        response_data = api_success(
+            "Detail course berhasil diambil",
+            {
+                "id": course.id,
+                "title": course.title
+            }
+        )
+
         cache.set(
             cache_key,
-            course,
+            response_data,
             timeout=900
         )
 
-        return course
+        return response_data
 
     except Course.DoesNotExist:
-        raise HttpError(
-            404,
-            "Course tidak ditemukan"
-        )
+        api_error(404, "Course tidak ditemukan")
 
 
 # CREATE COURSE
 @apiv1.post(
     "/courses/",
-    response={201: CourseOut},
+    response={
+        201: dict,
+        400: dict,
+        403: dict
+    },
     auth=jwt_auth,
     tags=["Courses"]
 )
@@ -123,10 +176,7 @@ def createCourse(request, data: CourseIn):
     category = Category.objects.first()
 
     if not category:
-        raise HttpError(
-            400,
-            "Category belum ada"
-        )
+        api_error(400, "Category belum ada")
 
     course = Course.objects.create(
         title=data.title,
@@ -143,13 +193,24 @@ def createCourse(request, data: CourseIn):
 
     cache.delete_pattern("courses:*")
 
-    return 201, course
+    return 201, api_success(
+        "Course berhasil dibuat",
+        {
+            "id": course.id,
+            "title": course.title,
+            "instructor": course.instructor.username
+        }
+    )
 
 
 # UPDATE COURSE
 @apiv1.patch(
     "/courses/{id}",
-    response=CourseOut,
+    response={
+        200: dict,
+        403: dict,
+        404: dict
+    },
     auth=jwt_auth,
     tags=["Courses"]
 )
@@ -161,16 +222,10 @@ def updateCourse(request, id: int, data: CourseIn):
         course = Course.objects.get(pk=id)
 
     except Course.DoesNotExist:
-        raise HttpError(
-            404,
-            "Course tidak ditemukan"
-        )
+        api_error(404, "Course tidak ditemukan")
 
     if course.instructor != request.user:
-        raise HttpError(
-            403,
-            "Anda bukan pemilik course ini"
-        )
+        api_error(403, "Anda bukan pemilik course ini")
 
     for attr, value in data.dict().items():
         setattr(course, attr, value)
@@ -187,13 +242,23 @@ def updateCourse(request, id: int, data: CourseIn):
     cache.delete_pattern("courses:*")
     cache.delete(f"course:{course.id}")
 
-    return course
+    return api_success(
+        "Course berhasil diperbarui",
+        {
+            "id": course.id,
+            "title": course.title
+        }
+    )
 
 
 # DELETE COURSE
 @apiv1.delete(
     "/courses/{id}",
-    response={204: None},
+    response={
+        200: dict,
+        403: dict,
+        404: dict
+    },
     auth=jwt_auth,
     tags=["Courses"]
 )
@@ -205,10 +270,7 @@ def deleteCourse(request, id: int):
         course = Course.objects.get(pk=id)
 
     except Course.DoesNotExist:
-        raise HttpError(
-            404,
-            "Course tidak ditemukan"
-        )
+        api_error(404, "Course tidak ditemukan")
 
     cache.delete_pattern("courses:*")
     cache.delete(f"course:{course.id}")
@@ -222,7 +284,9 @@ def deleteCourse(request, id: int):
 
     course.delete()
 
-    return 204, None
+    return api_success(
+        "Course berhasil dihapus"
+    )
 
 
 # ENROLL COURSE
@@ -240,10 +304,7 @@ def enroll_course(request, data: EnrollmentIn):
         course_id=data.course_id
     ).exists():
 
-        raise HttpError(
-            400,
-            "Sudah terdaftar"
-        )
+       api_error(400, "Sudah terdaftar")
 
     enrollment = Enrollment.objects.create(
         student=request.user,
@@ -262,10 +323,13 @@ def enroll_course(request, data: EnrollmentIn):
         enrollment.course.title
     )
 
-    return {
-        "id": enrollment.id,
-        "message": "Berhasil enroll"
-    }
+    return api_success(
+        "Berhasil enroll course",
+        {
+            "enrollment_id": enrollment.id,
+            "course": enrollment.course.title
+        }
+    )
 
 
 # MY COURSES
@@ -296,6 +360,11 @@ def my_courses(request):
 # MARK PROGRESS
 @apiv1.post(
     "/enrollments/{id}/progress",
+    response={
+        200: dict,
+        403: dict,
+        404: dict
+    },
     auth=jwt_auth,
     tags=["Enrollments"]
 )
@@ -307,16 +376,10 @@ def mark_progress(request, id: int, data: ProgressSchema):
         enrollment = Enrollment.objects.get(pk=id)
 
     except Enrollment.DoesNotExist:
-        raise HttpError(
-            404,
-            "Enrollment tidak ditemukan"
-        )
+        api_error(404, "Enrollment tidak ditemukan")
 
     if enrollment.student != request.user:
-        raise HttpError(
-            403,
-            "Bukan enrollment milik Anda"
-        )
+        api_error(403, "Bukan enrollment milik Anda")
 
     try:
         lesson = Lesson.objects.get(
@@ -324,10 +387,7 @@ def mark_progress(request, id: int, data: ProgressSchema):
         )
 
     except Lesson.DoesNotExist:
-        raise HttpError(
-            404,
-            "Lesson tidak ditemukan"
-        )
+        api_error(404, "Lesson tidak ditemukan")
 
     progress, created = (
         Progress.objects.get_or_create(
@@ -362,9 +422,182 @@ def mark_progress(request, id: int, data: ProgressSchema):
         "timestamp": datetime.utcnow()
     })
 
-    return {
-        "message": "Lesson selesai"
-    }
+    return api_success(
+        "Lesson selesai",
+        {
+            "lesson_id": lesson.id,
+            "course": enrollment.course.title
+        }
+    )
+
+# STUDENT DASHBOARD
+@apiv1.get(
+    "/dashboard/student",
+    response={
+        200: dict,
+        403: dict
+    },
+    auth=jwt_auth,
+    tags=["Dashboard"]
+)
+def student_dashboard(request):
+
+    is_student(request.user)
+
+    enrollments = (
+        Enrollment.objects
+        .select_related("course")
+        .filter(student=request.user)
+    )
+
+    courses_data = []
+
+    active_courses = 0
+    completed_courses = 0
+
+    for enrollment in enrollments:
+
+        total_lessons = Lesson.objects.filter(
+            course=enrollment.course
+        ).count()
+
+        completed_lessons = Progress.objects.filter(
+            enrollment=enrollment,
+            completed=True
+        ).count()
+
+        progress_percentage = 0
+
+        if total_lessons > 0:
+            progress_percentage = round(
+                (completed_lessons / total_lessons) * 100,
+                2
+            )
+
+        is_completed = (
+            total_lessons > 0
+            and completed_lessons == total_lessons
+        )
+
+        if is_completed:
+            completed_courses += 1
+        else:
+            active_courses += 1
+
+        courses_data.append({
+            "course_id": enrollment.course.id,
+            "title": enrollment.course.title,
+            "progress_percentage": progress_percentage,
+            "completed": is_completed
+        })
+
+    # rekomendasi sederhana:
+    # tampilkan 3 course yang belum diambil student
+
+    enrolled_ids = enrollments.values_list(
+        "course_id",
+        flat=True
+    )
+
+    recommendations = list(
+        Course.objects.exclude(
+            id__in=enrolled_ids
+        ).values_list(
+            "title",
+            flat=True
+        )[:3]
+    )
+
+    return api_success(
+        "Dashboard berhasil diambil",
+        {
+            "active_courses": active_courses,
+            "completed_courses": completed_courses,
+            "courses": courses_data,
+            "recommendations": recommendations
+        }
+    )
+
+# INSTRUCTOR DASHBOARD
+@apiv1.get(
+    "/dashboard/instructor",
+    response={
+        200: dict,
+        403: dict
+    },
+    auth=jwt_auth,
+    tags=["Dashboard"]
+)
+def instructor_dashboard(request):
+
+    is_instructor(request.user)
+
+    courses = Course.objects.filter(
+        instructor=request.user
+    )
+
+    total_courses = courses.count()
+
+    total_enrollments = Enrollment.objects.filter(
+        course__in=courses
+    ).count()
+
+    popular_course = (
+    Course.objects
+    .filter(instructor=request.user)
+    .annotate(total=Count("enrollments")) 
+    .order_by("-total")
+    .first()
+)
+
+    student_progress = []
+
+    enrollments = (
+        Enrollment.objects
+        .select_related("student", "course")
+        .filter(course__in=courses)
+    )
+
+    for enrollment in enrollments:
+
+        total_lessons = Lesson.objects.filter(
+            course=enrollment.course
+        ).count()
+
+        completed_lessons = Progress.objects.filter(
+            enrollment=enrollment,
+            completed=True
+        ).count()
+
+        percentage = 0
+
+        if total_lessons > 0:
+            percentage = round(
+                (completed_lessons / total_lessons) * 100,
+                2
+            )
+        
+        most_popular_course = (
+            popular_course.title
+            if popular_course
+            else None
+        )
+
+        student_progress.append({
+            "student": enrollment.student.username,
+            "course": enrollment.course.title,
+            "progress_percentage": percentage
+        })
+
+    return api_success(
+        "Dashboard instructor berhasil diambil",
+        {
+            "total_courses": total_courses,
+            "total_enrollments": total_enrollments,
+            "most_popular_course": most_popular_course,
+            "student_progress": student_progress
+        }
+    )
 
 
 # ANALYTICS REPORT
@@ -403,9 +636,9 @@ def export_report(request):
 
     export_course_report.delay()
 
-    return {
-        "message": "Export report sedang diproses"
-    }
+    return api_success(
+        "Export report sedang diproses"
+    )
 
 @apiv1.get(
     "/reports/analytics",
@@ -432,4 +665,141 @@ def learning_analytics_report(request):
     for item in result:
         item["_id"] = str(item["_id"])
 
-    return result
+    return api_success(
+        "Analytics berhasil diambil",
+        result
+    )
+
+# ANNOUNCEMENTS
+@apiv1.post(
+    "/courses/{course_id}/announcements",
+    response={
+        200: dict,
+        403: dict,
+        404: dict
+    },
+    auth=jwt_auth,
+    tags=["Announcement"]
+)
+def create_announcement(request, course_id: int, data: AnnouncementIn):
+
+    try:
+        course = Course.objects.get(id=course_id)
+
+    except Course.DoesNotExist:
+        api_error(404, "Course tidak ditemukan")
+
+    if request.user != course.instructor:
+        api_error(403, "Only instructor can create announcements")
+
+    announcement = Announcement.objects.create(
+        course=course,
+        title=data.title,
+        content=data.content
+    )
+
+    return api_success(
+        "Pengumuman berhasil dibuat",
+        {
+            "id": announcement.id,
+            "title": announcement.title,
+            "content": announcement.content,
+            "created_at": announcement.created_at
+        }
+    )
+
+@apiv1.get(
+    "/courses/{course_id}/announcements",
+    response=dict,
+    auth=jwt_auth,
+    tags=["Announcement"]
+)
+def list_announcements(request, course_id: int):
+
+    announcements = Announcement.objects.filter(
+        course_id=course_id
+    )
+
+    data = [
+        {
+            "id": a.id,
+            "title": a.title,
+            "content": a.content,
+            "created_at": a.created_at
+        }
+        for a in announcements
+    ]
+
+    return api_success(
+        "Daftar pengumuman berhasil diambil",
+        data
+    )
+
+# HEALTH CHECK
+@apiv1.get(
+    "/health",
+    response=dict,
+    tags=["System"]
+)
+def health_check(request):
+
+    # PostgreSQL
+    try:
+        connection.ensure_connection()
+        db_status = "ok"
+    except Exception:
+        db_status = "error"
+
+    # Redis
+    try:
+        cache.set("health_check", "ok", 10)
+        cache.get("health_check")
+        redis_status = "ok"
+    except Exception:
+        redis_status = "error"
+
+    # MongoDB
+    try:
+        db.command("ping")
+        mongo_status = "ok"
+    except Exception:
+        mongo_status = "error"
+
+    return api_success(
+        "Health check berhasil",
+        {
+            "status": "healthy",
+            "database": db_status,
+            "redis": redis_status,
+            "mongodb": mongo_status
+        }
+    )
+
+# API CHANGELOG
+@apiv1.get(
+    "/changelog",
+    response=dict,
+    tags=["System"]
+)
+def api_changelog(request):
+
+    return api_success(
+        "Daftar perubahan API",
+        {
+            "version": "v1.0.0",
+            "changes": [
+                "Authentication JWT",
+                "CRUD Course",
+                "Enrollment & Progress Tracking",
+                "Course Announcement",
+                "Student Dashboard",
+                "Instructor Dashboard",
+                "Consistent API Response & Error Format",
+                "Health Check Endpoint",
+                "API Changelog Endpoint",
+                "Redis Caching",
+                "MongoDB Analytics",
+                "Celery Background Tasks"
+            ]
+        }
+    )

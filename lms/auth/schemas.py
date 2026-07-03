@@ -1,4 +1,10 @@
 from pydantic import BaseModel
+from ninja import Schema
+from datetime import datetime
+from typing import List
+from ninja import Schema
+
+
 
 
 # COURSE
@@ -68,3 +74,57 @@ class UserOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+# ANNOUNCEMENT
+
+class AnnouncementIn(Schema):
+    title: str
+    content: str
+
+
+class AnnouncementOut(Schema):
+    id: int
+    title: str
+    content: str
+    created_at: datetime
+
+
+# STUDENT DASHBOARD
+class StudentCourseProgressOut(Schema):
+    course_id: int
+    title: str
+    progress_percentage: float
+    completed: bool
+
+
+class StudentDashboardOut(Schema):
+    active_courses: int
+    completed_courses: int
+    courses: List[StudentCourseProgressOut]
+    recommendations: List[str]
+
+
+# INSTRUCTOR DASHBOARD
+class StudentProgressOut(Schema):
+    student: str
+    course: str
+    progress_percentage: float
+
+
+class InstructorDashboardOut(Schema):
+    total_courses: int
+    total_enrollments: int
+    most_popular_course: str | None
+    student_progress: List[StudentProgressOut]
+
+# HEALTH CHECK AND CHANGELOG
+class HealthCheckOut(Schema):
+    status: str
+    database: str
+    redis: str
+    mongodb: str
+
+
+class ChangelogOut(Schema):
+    version: str
+    changes: List[str]
