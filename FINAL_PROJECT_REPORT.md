@@ -39,7 +39,7 @@ Simple LMS merupakan aplikasi Learning Management System berbasis Django dan Dja
 | 1 | Course Announcement | Instructor Feature | 10 | ✅ Selesai |
 | 2 | Student Dashboard | Dashboard | 12 | ✅ Selesai |
 | 3 | Instructor Dashboard | Dashboard | 12 | ✅ Selesai |
-| 4 | Consistent Response & Error Format | API Improvement | 10 | ✅ Selesai |
+| 4 | Response dan error format konsisten | API Improvement | 10 | ✅ Selesai |
 | 5 | Health Check dan API Changelog | Monitoring & Documentation | 8 | ✅ Selesai |
 
 **Total Poin Tambahan: 52**
