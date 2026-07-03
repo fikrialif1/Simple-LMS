@@ -202,8 +202,11 @@ docker compose exec web python manage.py createsuperuser
 ### Authentication
 
 ```text
-POST /api/register
-POST /api/login
+POST /api/auth/register
+POST /api/auth/login
+POST /api/auth/refresh
+GET  /api/auth/me
+PUT  /api/auth/m
 ```
 
 ### Course
